@@ -1,21 +1,18 @@
 package Caballos;
 
-
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class CaballoSwing extends JFrame {
 
     // ── Constantes del algoritmo ──────────────────────────────────────────────
-    static final int N = 8;
-    static final int[] dx = {2, 1, -1, -2, -2, -1, 1, 2};
-    static final int[] dy = {1, 2, 2, 1, -1, -2, -2, -1};
+    static final int N = 8; //tamaño del tablero
+    static final int[] desplazamientoX = {2, 1, -1, -2, -2, -1, 1, 2}; //movimientos que puede hacer el caballo en x
+    static final int[] desplazamientoY = {1, 2, 2, 1, -1, -2, -2, -1}; //movimientos que puede hacer el caballo en y
+    //La forma en que se mueve el caballo es una combinación de estos movimientos ejemplo {2,1},{1,2},{-1,2} primero en x luego en y
 
     // ── Colores del tablero ───────────────────────────────────────────────────
     static final Color COLOR_CASILLA_CLARA   = new Color(240, 217, 181);
@@ -31,14 +28,14 @@ public class CaballoSwing extends JFrame {
     static final Color COLOR_LINEA           = new Color(91, 168, 90, 160);
 
     // ── Estado de la simulación ───────────────────────────────────────────────
-    int[][] tablero      = new int[N][N];
-    int[]   secuenciaX   = new int[N * N];
-    int[]   secuenciaY   = new int[N * N];
-    int     pasoActual   = 0;
-    int     totalPasos   = 0;
-    boolean resuelto     = false;
-    int     inicioX      = 0;
-    int     inicioY      = 0;
+    int[][] tablero    = new int[N][N];
+    int[]   secuenciaX = new int[N * N];
+    int[]   secuenciaY = new int[N * N];
+    int     pasoActual = 0;
+    int     totalPasos = 0;
+    boolean resuelto   = false;
+    int     inicioX    = 0;
+    int     inicioY    = 0;
 
     // ── Componentes UI ────────────────────────────────────────────────────────
     TableroPanel tableroPanel;
@@ -92,14 +89,15 @@ public class CaballoSwing extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if (!esperandoClick) return;
                 int cellSize = tableroPanel.getCellSize();
-                int col = e.getX() / cellSize;
-                int row = e.getY() / cellSize;
+                // Obtenemos directamente el índice 0-7 según el clic
+                int col = (e.getX() - TableroPanel.OFFSET) / cellSize;
+                int row = (e.getY() - TableroPanel.OFFSET) / cellSize;
                 if (row >= 0 && row < N && col >= 0 && col < N) {
-                    spnFila.setValue(row + 1);
-                    spnColumna.setValue(col + 1);
+                    spnFila.setValue(row);     // 0-7 directo
+                    spnColumna.setValue(col);  // 0-7 directo
                     esperandoClick = false;
                     tableroPanel.setCursor(Cursor.getDefaultCursor());
-                    lblEstado.setText("Posición seleccionada: fila " + (row + 1) + ", col " + (col + 1) + ". Presiona Resolver.");
+                    lblEstado.setText("Posición seleccionada: fila " + row + ", col " + col + ". Presiona Resolver.");
                     tableroPanel.highlightCell(row, col);
                 }
             }
@@ -128,16 +126,17 @@ public class CaballoSwing extends JFrame {
         JPanel panelCoords = new JPanel(new GridLayout(2, 2, 6, 6));
         panelCoords.setBackground(COLOR_PANEL);
 
-        JLabel lblFila = new JLabel("Fila (1-8):");
+        // El usuario ingresa directamente 0-7, igual que el algoritmo
+        JLabel lblFila = new JLabel("Fila (0-7):");
         lblFila.setForeground(COLOR_TEXTO);
         lblFila.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-        JLabel lblCol = new JLabel("Columna (1-8):");
+        JLabel lblCol = new JLabel("Columna (0-7):");
         lblCol.setForeground(COLOR_TEXTO);
         lblCol.setFont(new Font("Segoe UI", Font.PLAIN, 13));
 
-        spnFila     = crearSpinner(1, 8, 1);
-        spnColumna  = crearSpinner(1, 8, 1);
+        spnFila    = crearSpinner(0, 7, 0); // 0-7 directo
+        spnColumna = crearSpinner(0, 7, 0); // 0-7 directo
 
         panelCoords.add(lblFila);
         panelCoords.add(spnFila);
@@ -181,7 +180,7 @@ public class CaballoSwing extends JFrame {
 
         JPanel panelNav = new JPanel(new GridLayout(1, 2, 6, 0));
         panelNav.setBackground(COLOR_PANEL);
-        btnAnterior = crearBoton("◀", new Color(70, 70, 90));
+        btnAnterior  = crearBoton("◀", new Color(70, 70, 90));
         btnSiguiente = crearBoton("▶", new Color(70, 70, 90));
         btnAnterior.addActionListener(e -> retrocederPaso());
         btnSiguiente.addActionListener(e -> avanzarPaso());
@@ -223,7 +222,7 @@ public class CaballoSwing extends JFrame {
         add(panelControl, BorderLayout.EAST);
 
         // ── Barra de estado inferior ──────────────────────────────────────────
-        lblEstado = new JLabel("Elige una posición de inicio y presiona Resolver.");
+        lblEstado = new JLabel("Elige una posición de inicio (0-7) y presiona Resolver.");
         lblEstado.setForeground(new Color(180, 180, 180));
         lblEstado.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblEstado.setBorder(new EmptyBorder(8, 0, 0, 0));
@@ -242,33 +241,45 @@ public class CaballoSwing extends JFrame {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    //  Lógica del algoritmo (backtracking)
+    //  Lógica del algoritmo (backtracking) — fiel a CaballoRecursivo
     // ─────────────────────────────────────────────────────────────────────────
+
+    //Clase auxiliar que nos sirve para guardar el tablero como cambia el tablero
+    //La clase es static, para evitar que cada objeto de Estado necesite una referencia a un objeto externo de CaballoSwing
+    static class Estado {
+        int[][] tablero; //declarar un tablero temporal
+        int paso; //cantidad de pasos que debe recorrer el caballo
+
+        Estado(int[][] tablero, int paso) {
+            this.tablero = tablero;
+            this.paso = paso;
+        }
+    }
+
     private void resolver() {
         detenerPlay();
-        int fila = chkRandom.isSelected()
-                ? new Random().nextInt(N)
-                : (int) spnFila.getValue() - 1;
-        int col  = chkRandom.isSelected()
-                ? new Random().nextInt(N)
-                : (int) spnColumna.getValue() - 1;
+
+        // Leemos directo 0-7, sin conversiones
+        int fila = chkRandom.isSelected() ? new Random().nextInt(N) : (int) spnFila.getValue();
+        int col  = chkRandom.isSelected() ? new Random().nextInt(N) : (int) spnColumna.getValue();
 
         inicioX = fila;
         inicioY = col;
 
-        // Reiniciar tablero
-        for (int[] r : tablero) java.util.Arrays.fill(r, -1);
-        tablero[fila][col] = 0;
+        //crear el tablero principal / inicial
+        for (int[] r : tablero) java.util.Arrays.fill(r, -1); //llenar el tablero inicialmente con -1
+        tablero[fila][col] = 0; //posición en la que va a empezar el caballo
 
-        lblEstado.setText("Calculando solución desde (" + (fila+1) + ", " + (col+1) + ")…");
+        lblEstado.setText("Calculando solución desde (" + fila + ", " + col + ")…");
         btnResolver.setEnabled(false);
         repaint();
 
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             @Override
             protected Boolean doInBackground() {
-                Estado est = new Estado(tablero, 0);
-                return resolverDesde(fila, col, est);
+                //iniciar la copia de la primera posición o tablero inicial
+                Estado estadoInicial = new Estado(tablero, 0);
+                return resolverDesde(fila, col, estadoInicial);
             }
 
             @Override
@@ -278,7 +289,7 @@ public class CaballoSwing extends JFrame {
                 } catch (Exception ex) { resuelto = false; }
 
                 if (resuelto) {
-                    // Construir secuencia de movimientos
+                    // Construir secuencia de movimientos para la animación
                     int[][] posiciones = new int[N * N][2];
                     for (int i = 0; i < N; i++)
                         for (int j = 0; j < N; j++)
@@ -303,24 +314,31 @@ public class CaballoSwing extends JFrame {
         worker.execute();
     }
 
-    static class Estado {
-        int[][] tablero;
-        int paso;
-        Estado(int[][] tablero, int paso) {
-            this.tablero = tablero;
-            this.paso = paso;
-        }
-    }
+    //metodo con el que se busca encontrar el camino que nos lleve a la solución
+    static boolean resolverDesde(int x, int y, Estado estado) { //recibe las posiciones y el tablero
 
-    static boolean resolverDesde(int x, int y, Estado estado) {
-        if (estado.paso == N * N - 1) return true;
+        //Caso base:
+        //Si el caballo ya recorrió todas las casillas del tablero
+        //mostramos la solución encontrada
+        if (estado.paso == N * N - 1) {
+            return true;
+        }
+
         for (int i = 0; i < 8; i++) {
-            int nx = x + dx[i];
-            int ny = y + dy[i];
+            int nx = x + desplazamientoX[i]; //hacia donde nos vamos a mover en x
+            int ny = y + desplazamientoY[i]; //hacia donde nos vamos a mover en y
+
+            //verificar si es valido
             if (esValido(nx, ny, estado.tablero)) {
-                estado.tablero[nx][ny] = estado.paso + 1;
+                estado.tablero[nx][ny] = estado.paso + 1; //si es valido nos movemos y sumamos en 1 al numero de pasos
                 estado.paso++;
-                if (resolverDesde(nx, ny, estado)) return true;
+
+                //y volvemos a llamar a resolver haciendo el mismo proceso de resolver desde la nueva posición
+                if (resolverDesde(nx, ny, estado))
+                    return true;
+
+                //por si un movimiento no esta permitido devolvemos en 1 los pasos y volvemos a la posición anterior
+                // backtrack
                 estado.tablero[nx][ny] = -1;
                 estado.paso--;
             }
@@ -328,8 +346,9 @@ public class CaballoSwing extends JFrame {
         return false;
     }
 
+    //verificar que el movimiento si sea valido y no nos salgamos del tablero
     static boolean esValido(int x, int y, int[][] tablero) {
-        return x >= 0 && y >= 0 && x < N && y < N && tablero[x][y] == -1;
+        return x >= 0 && y >= 0 && x < N && y < N && tablero[x][y] == -1; //verificar que no se salga del tablero, el tablero[x][y]==-1 es para verificar que no esta recorrida esa posición
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -380,7 +399,7 @@ public class CaballoSwing extends JFrame {
         for (int[] r : tablero) java.util.Arrays.fill(r, -1);
         tableroPanel.resetVisualizacion();
         tableroPanel.repaint();
-        lblEstado.setText("Elige una posición de inicio y presiona Resolver.");
+        lblEstado.setText("Elige una posición de inicio (0-7) y presiona Resolver.");
         lblPaso.setText("Paso: — / —");
         actualizarBotones();
     }
@@ -456,8 +475,8 @@ public class CaballoSwing extends JFrame {
     //  Panel del tablero con dibujo personalizado
     // ─────────────────────────────────────────────────────────────────────────
     class TableroPanel extends JPanel {
-        private static final int CELL = 60;
-        private static final int OFFSET = 24; // espacio para coordenadas
+        static final int CELL   = 60;
+        static final int OFFSET = 28; // espacio para los números del borde (0-7)
 
         // Qué pasos mostrar actualmente
         int pasosMostrados = -1;
@@ -496,15 +515,14 @@ public class CaballoSwing extends JFrame {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-            // ── Coordenadas del borde ─────────────────────────────────────────
+            // ── Coordenadas del borde: 0-7 igual que el algoritmo ────────────
             g2.setFont(new Font("Segoe UI Mono", Font.BOLD, 11));
             g2.setColor(new Color(150, 150, 170));
             for (int i = 0; i < N; i++) {
-                // letras (columnas): A-H
-                String letra = String.valueOf((char)('A' + i));
-                g2.drawString(letra, OFFSET + i * CELL + CELL / 2 - 4, 14);
-                // números (filas): 1-8
-                g2.drawString(String.valueOf(i + 1), 6, OFFSET + i * CELL + CELL / 2 + 5);
+                // números columnas: 0-7 (arriba)
+                g2.drawString(String.valueOf(i), OFFSET + i * CELL + CELL / 2 - 4, 16);
+                // números filas: 0-7 (izquierda)
+                g2.drawString(String.valueOf(i), 8, OFFSET + i * CELL + CELL / 2 + 5);
             }
 
             // ── Celdas ───────────────────────────────────────────────────────
@@ -512,22 +530,22 @@ public class CaballoSwing extends JFrame {
                 for (int c = 0; c < N; c++) {
                     int x = OFFSET + c * CELL;
                     int y = OFFSET + r * CELL;
-                    boolean claras = (r + c) % 2 == 0;
+                    boolean clara = (r + c) % 2 == 0;
 
                     // Determinar si esta celda fue visitada hasta el paso actual
                     boolean visitada = false;
                     int numPaso = -1;
                     if (resuelto && pasosMostrados >= 0) {
-                        numPaso = tablero[r][c];
+                        numPaso  = tablero[r][c];
                         visitada = numPaso >= 0 && numPaso <= pasosMostrados;
                     }
 
-                    // Color base
+                    // Color base de la casilla
                     Color base;
                     if (visitada) {
-                        base = claras ? COLOR_VISITADA_CLARA : COLOR_VISITADA_OSCURA;
+                        base = clara ? COLOR_VISITADA_CLARA : COLOR_VISITADA_OSCURA;
                     } else {
-                        base = claras ? COLOR_CASILLA_CLARA : COLOR_CASILLA_OSCURA;
+                        base = clara ? COLOR_CASILLA_CLARA : COLOR_CASILLA_OSCURA;
                     }
                     g2.setColor(base);
                     g2.fillRect(x, y, CELL, CELL);
@@ -543,15 +561,15 @@ public class CaballoSwing extends JFrame {
                     }
 
                     // Resaltado celda actual (posición del caballo)
-                    boolean esCeldasActual = resuelto && pasosMostrados >= 0
+                    boolean esCeldaActual = resuelto && pasosMostrados >= 0
                             && secuenciaX[pasosMostrados] == r
                             && secuenciaY[pasosMostrados] == c;
-                    if (esCeldasActual) {
+                    if (esCeldaActual) {
                         g2.setColor(new Color(255, 236, 80, 200));
                         g2.fillRect(x, y, CELL, CELL);
                     }
 
-                    // Celda de highlight (selección manual)
+                    // Celda de highlight (selección manual antes de resolver)
                     if (!resuelto && cellHighlightR == r && cellHighlightC == c) {
                         g2.setColor(new Color(91, 168, 90, 120));
                         g2.fillRect(x, y, CELL, CELL);
@@ -563,8 +581,7 @@ public class CaballoSwing extends JFrame {
 
                     // Número de paso dentro de la celda
                     if (visitada && numPaso >= 0) {
-                        boolean esActual = esCeldasActual;
-                        g2.setColor(esActual ? new Color(40, 40, 40) : new Color(30, 60, 30));
+                        g2.setColor(esCeldaActual ? new Color(40, 40, 40) : new Color(30, 60, 30));
                         g2.setFont(new Font("Segoe UI Mono", Font.BOLD, numPaso < 10 ? 15 : 13));
                         String num = String.valueOf(numPaso);
                         FontMetrics fm = g2.getFontMetrics();
@@ -584,7 +601,7 @@ public class CaballoSwing extends JFrame {
                     int x2 = OFFSET + secuenciaY[p]     * CELL + CELL / 2;
                     int y2 = OFFSET + secuenciaX[p]     * CELL + CELL / 2;
 
-                    // Gradiente de color según avance
+                    // Gradiente de color según avance del recorrido
                     float t = (float) p / totalPasos;
                     Color lineColor = interpolarColor(
                             new Color(91, 168, 90, 200),
@@ -614,9 +631,9 @@ public class CaballoSwing extends JFrame {
         }
 
         private Color interpolarColor(Color a, Color b, float t) {
-            int r = (int)(a.getRed()   + (b.getRed()   - a.getRed())   * t);
-            int g = (int)(a.getGreen() + (b.getGreen() - a.getGreen()) * t);
-            int bv = (int)(a.getBlue() + (b.getBlue()  - a.getBlue())  * t);
+            int r  = (int)(a.getRed()   + (b.getRed()   - a.getRed())   * t);
+            int g  = (int)(a.getGreen() + (b.getGreen() - a.getGreen()) * t);
+            int bv = (int)(a.getBlue()  + (b.getBlue()  - a.getBlue())  * t);
             int al = (int)(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t);
             return new Color(r, g, bv, al);
         }
