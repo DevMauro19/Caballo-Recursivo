@@ -1,14 +1,15 @@
 package Caballos;
 
-
 public class CaballoRecursivo {
 
     static final int N = 8; //tamaño del tablero
-    static final int[] dx = {2, 1, -1, -2, -2, -1, 1, 2}; //movimientos que puede hacer el caballo en x
-    static final int[] dy = {1, 2, 2, 1, -1, -2, -2, -1}; //movimientos que puede hacer el caballo en y
-    //La forma en que se mueve el camballo es una combinación de estos movimientos
+    static final int[] desplazamientoX = {2, 1, -1, -2, -2, -1, 1, 2}; //movimientos que puede hacer el caballo en x
+    static final int[] desplazamientoY = {1, 2, 2, 1, -1, -2, -2, -1}; //movimientos que puede hacer el caballo en y
+    //La forma en que se mueve el camballo es una combinación de estos movimientos ejemplo {{2,1},{1,2},{-1,2}} primero en x luego en y
     
-    //Clase auxiliar que nos sirve para guardar el tablero
+    //Clase auxiliar que nos sirve para guardar el tablero como cambia el tablero
+    
+    //La clase es static, para evitar que cada objeto de Estado necesite una referencia a un objeto externo de Caballo Recursivo
     static class Estado { 
     	
         int[][] tablero; //declarar un tablero temporal
@@ -19,13 +20,6 @@ public class CaballoRecursivo {
             this.paso = paso;
         }
         
-         //hacer una copia del tablero por cada posición
-//        Estado copiar() {
-//            int[][] nuevoTablero = new int[N][N]; //tablero 8x8
-//            for (int i = 0; i < N; i++)
-//                System.arraycopy(tablero[i], 0, nuevoTablero[i], 0, N); //copiar el tablero
-//            return new Estado(nuevoTablero, paso); //retornar el tablero
-//        }
     }
 
     public static void main(String[] args) {
@@ -43,14 +37,18 @@ public class CaballoRecursivo {
     
     //metodo con el que se busca encontrar el camino que nos lleve a  la solución
     static boolean resolverDesde(int x, int y, Estado estado) { //recibe las posiciones y el tablero
-        if (estado.paso == N * N - 1) { //Cantidad de pasos a dar y mostrar el tablero final de como se movio el caballo 
+       
+    	//Caso base:
+    	//Si el caballor ya recorrió todas las casillas del tablero
+    	//mostramos la solución encontrada
+    	if (estado.paso == N * N - 1) { 
             imprimir(estado.tablero); 
             return true;
         }
         
         for (int i = 0; i < 8; i++) {
-            int nx = x + dx[i]; //hacia donde nos vamos a mover en x
-            int ny = y + dy[i]; //hacia donde nos vamos a mover en y
+            int nx = x + desplazamientoX[i]; //hacia donde nos vamos a mover en x
+            int ny = y + desplazamientoY[i]; //hacia donde nos vamos a mover en y
 
             //verificar si es valido
 
