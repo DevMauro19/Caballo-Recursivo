@@ -7,6 +7,8 @@ public class CaballoRecursivo {
     static final int[] desplazamientoY = {1, 2, 2, 1, -1, -2, -2, -1}; //movimientos que puede hacer el caballo en y
     //La forma en que se mueve el camballo es una combinación de estos movimientos ejemplo {{2,1},{1,2},{-1,2}} primero en x luego en y
     
+    static boolean exito = false; 
+    
     //Clase auxiliar que nos sirve para guardar el tablero como cambia el tablero
     
     //La clase es static, para evitar que cada objeto de Estado necesite una referencia a un objeto externo de Caballo Recursivo
@@ -29,24 +31,27 @@ public class CaballoRecursivo {
 
         tablero[0][0] = 0; //posición en la que va a empezar el caballo
         Estado estadoInicial = new Estado(tablero, 0); //inicar la copia de la primera posición o tablero inicial
-
-        if (!resolverDesde(0, 0, estadoInicial)) {
+        
+        resolverDesde(0, 0, estadoInicial);
+        if (!exito) {
             System.out.println("No se encontró solución.");
         }
     }
     
     //metodo con el que se busca encontrar el camino que nos lleve a  la solución
-    static boolean resolverDesde(int x, int y, Estado estado) { //recibe las posiciones y el tablero
+    static void resolverDesde(int x, int y, Estado estado) { //recibe las posiciones y el tablero
        
     	//Caso base:
     	//Si el caballor ya recorrió todas las casillas del tablero
     	//mostramos la solución encontrada
     	if (estado.paso == N * N - 1) { 
             imprimir(estado.tablero); 
-            return true;
+            exito = true;
         }
+    	
+    	int i = 0; 
         
-        for (int i = 0; i < 8; i++) {
+        while(i<8 && !exito) {
             int nx = x + desplazamientoX[i]; //hacia donde nos vamos a mover en x
             int ny = y + desplazamientoY[i]; //hacia donde nos vamos a mover en y
 
@@ -56,18 +61,27 @@ public class CaballoRecursivo {
                 estado.tablero[nx][ny] = estado.paso + 1; //si es valido nos movemos y sumamos en 1 al numero de pasos
                 estado.paso++;
                 
+                resolverDesde(nx, ny, estado);
                 //y volvemos a llamar a resolver haciendo el mismo proceso de resolver desde la nueva posición
-                if (resolverDesde(nx, ny, estado))
-                    return true;
+                if (!exito) {
+                	estado.tablero[nx][ny] = -1;
+                	estado.paso--;;
+                }
+                else {
+                	exito = true;
+                }
+                
+                
                 
                 //por si un movimiento no esta permitido devolvemos en 1 los pasos y volvemos a la posición anterior
                 // backtrack
-                estado.tablero[nx][ny] = -1;
-                estado.paso--;
+                
             }
+            
+            i++;
         }
 
-        return false;
+        
     }
     
     //verificar que el movimiento si sea valido y no nos salgamos del tablero
